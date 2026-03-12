@@ -85,11 +85,36 @@ Do not proceed past any gate until the user confirms.
 1. **Plan gate**: share a 1-2 sentence plan for the full feature, write/update `PLAN.md`, and ask for approval.
 2. **Sprint gate**: implement the feature, then stop and report exactly what changed.
 3. **Verification gate**: run browser-based visual verification when available and provide evidence (screenshot when possible). If browser tooling is unavailable, run available checks and request manual visual verification.
-4. **Completion gate**: ask the user to confirm the feature is done before running the completion steps below.
+4. **Approval gate**: ask the user to confirm they are happy with the feature before proceeding to testing.
+5. **Testing gate**: after the user approves, add all required tests (see Testing Phase below), then report what was added. The feature is **not complete** until all tests pass.
+
+## Testing Phase (mandatory — runs after approval gate)
+
+Once the user confirms they are happy with the feature, add the following tests before proceeding to completion:
+
+### 1. Unit Tests
+- Add unit tests for every new component, hook, utility, or store module introduced by the feature.
+- Co-locate test files next to the source file (e.g. `Component.test.tsx` beside `Component.tsx`).
+- Use the project's existing test framework (Vitest).
+
+### 2. Storybook Stories
+- Add Storybook stories for every new UI component.
+- Cover the default state plus meaningful variants (e.g. loading, empty, error, interactive states).
+- Co-locate story files next to the component (e.g. `Component.stories.tsx`).
+
+### 3. E2E Tests (Playwright)
+- Add Playwright tests that cover the primary user flows introduced by the feature.
+- Place test files in `apps/web/tests/`.
+- Each test should verify the happy-path behavior a user would exercise.
+
+### Verification
+- Run unit tests (`pnpm test`) and confirm they pass.
+- Run E2E tests (`pnpm exec playwright test`) and confirm they pass.
+- Report results to the user. If any tests fail, fix them before proceeding.
 
 ## Feature Completion (mandatory)
 
-After the user confirms a feature is complete:
+A feature is complete only after all tests from the Testing Phase pass. Then:
 
 1. **Update `ARCHITECTURE.md`** to reflect the current state of the system. Add or revise sections for any new components, data flows, API endpoints, or patterns introduced by this feature. `ARCHITECTURE.md` must always describe the system as it exists *now*.
 2. **Append to `DECISIONS.md`** with a summary of the feature and key decisions. Use this format:
