@@ -1,4 +1,4 @@
-# Starter App — Multi-User Real-Time App Template
+# Starter App — Template
 
 ## Architecture
 - **Monorepo**: Turborepo with `apps/web`, `apps/server`, `packages/shared`

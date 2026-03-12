@@ -8,7 +8,7 @@ Replace `[APP DESCRIPTION]` and `[FEATURES]` with what the interview asks for.
 ## The Prompt
 
 ```
-Read the GEMINI.md file in this project first — it describes the starter app architecture.
+Read the ARCHITECTURE.md file in this project first — it describes the starter app architecture.
 
 I'm in a 50-minute timed interview. I need to build [APP DESCRIPTION] using this starter app as a base. The app needs to support multiple users in real-time.
 
