@@ -1,6 +1,7 @@
 node_modules
 dist
 .turbo
+.pnpm-store/
 
 *storybook.log
 storybook-static
