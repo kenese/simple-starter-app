@@ -16,9 +16,12 @@
   "dependencies": {
     "@starter/shared": "workspace:*",
     "@tanstack/react-query": "^5.90.21",
+    "konva": "^10.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-konva": "^19.2.3",
     "react-router-dom": "^7.0.0",
+    "socket.io-client": "^4.8.3",
     "uuid": "^11.1.0",
     "zustand": "^5.0.0"
   },
