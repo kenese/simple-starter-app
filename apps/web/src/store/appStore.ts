@@ -1,8 +1,16 @@
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
-import type { CanvasElement, ElementLock } from "@starter/shared";
+import type { CanvasElement, ElementLock, CursorPosition } from "@starter/shared";
 
 const SESSION_USER_ID = uuidv4();
+
+export interface SpatialTarget {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
 
 interface CanvasStore {
   userId: string;
@@ -16,6 +24,8 @@ interface CanvasStore {
   localMutationCount: number;
   locks: ElementLock[];
   documentReady: boolean;
+  remoteCursors: CursorPosition[];
+  elementTargets: Record<string, SpatialTarget>;
 
   setDocumentId: (id: string) => void;
   setDocName: (name: string) => void;
@@ -31,6 +41,9 @@ interface CanvasStore {
   removeLock: (elementId: string) => void;
   clearLocks: () => void;
   setDocumentReady: (ready: boolean) => void;
+  setRemoteCursor: (userId: string, x: number, y: number) => void;
+  removeRemoteCursor: (userId: string) => void;
+  clearRemoteCursors: () => void;
   isLockedByOther: (elementId: string) => boolean;
   getLockOwner: (elementId: string) => string | null;
   resetForNewDocument: () => void;
@@ -48,6 +61,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   localMutationCount: 0,
   locks: [],
   documentReady: false,
+  remoteCursors: [],
+  elementTargets: {},
 
   setDocumentId: (id) => set({ documentId: id }),
 
@@ -104,6 +119,21 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   setDocumentReady: (ready) => set({ documentReady: ready }),
 
+  setRemoteCursor: (userId, x, y) =>
+    set((state) => ({
+      remoteCursors: [
+        ...state.remoteCursors.filter((c) => c.userId !== userId),
+        { userId, x, y },
+      ],
+    })),
+
+  removeRemoteCursor: (userId) =>
+    set((state) => ({
+      remoteCursors: state.remoteCursors.filter((c) => c.userId !== userId),
+    })),
+
+  clearRemoteCursors: () => set({ remoteCursors: [] }),
+
   isLockedByOther: (elementId) => {
     const { locks, userId } = get();
     const lock = locks.find((l) => l.elementId === elementId);
@@ -126,5 +156,11 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       locks: [],
       documentReady: false,
       docName: "Untitled",
+      remoteCursors: [],
+      elementTargets: {},
     }),
 }));
+
+if (typeof window !== "undefined") {
+  (window as any).__canvasStore = useCanvasStore;
+}

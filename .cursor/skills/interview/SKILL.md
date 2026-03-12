@@ -26,6 +26,7 @@ For each feature sprint, implement in this order when relevant:
 1. `packages/shared` types/state contract changes
 2. `apps/server` handlers or API behavior
 3. `apps/web` UI and client behavior
+4. **Tests** — unit tests and E2E tests for the feature (see Testing Requirements below)
 
 ## Persistent Plan File (`PLAN.md`)
 
@@ -77,8 +78,9 @@ For each feature:
 
 1. **Plan gate**: share a 1-2 sentence plan for the **full feature sprint**, write/update `PLAN.md`, and ask for approval.
 2. **Sprint gate**: implement the feature sprint, then stop and report exactly what changed.
-3. **Verification gate**: run browser-based visual verification when available and provide evidence (screenshot when possible). If browser tooling is unavailable, run available checks and request manual visual verification.
-4. **Proceed gate**: ask if the user wants:
+3. **Test gate**: write unit tests for new/changed functions, hooks, and server handlers; write E2E tests for user-facing behavior. All existing and new tests must pass before proceeding. Report test counts and any skipped tests.
+4. **Verification gate**: run browser-based visual verification when available and provide evidence (screenshot when possible). If browser tooling is unavailable, run available checks and request manual visual verification.
+5. **Proceed gate**: ask if the user wants:
    - continue to the next feature sprint, or
    - pause and resume later (with `PLAN.md` updated), or
    - move to the next feature.
@@ -95,6 +97,27 @@ After each sprint, respond in this structure:
 4. `Status`: done, partial, or blocked
 5. `Plan Update`: what was changed in `PLAN.md`
 6. `Question`: explicit approval request before proceeding
+
+## Testing Requirements
+
+Every feature sprint must include tests before the test gate:
+
+### Unit tests (vitest)
+- **Store**: test every new/changed action and selector in `appStore.ts`
+- **Server**: test new REST endpoints with supertest; test new socket.io handlers with socket.io-client
+- **Pure functions**: test exported helpers (e.g. `createShapeElement`, throttle utilities)
+- **Components**: test rendering and props for simple components (TopNav, Sidebar); skip Konva canvas components (CanvasShape, DesignCanvas) as they are impractical to unit test
+- **Hooks**: test custom hooks with `renderHook` when they contain standalone logic
+
+### E2E tests (Playwright)
+- Add Playwright specs in `apps/web/tests/` for user-facing workflows introduced by the feature
+- Use `page.evaluate(() => window.__canvasStore.getState())` to assert canvas state (Konva renders to Canvas, not DOM)
+- For multi-user tests, use `browser.newContext()` to simulate separate users on the same document
+- All E2E tests must pass alongside existing tests before proceeding
+
+### Running tests
+- Unit: `pnpm test` (runs vitest across all packages)
+- E2E: `CI= pnpm --filter @starter/web exec playwright test` (unset CI to reuse running dev servers)
 
 ## Constraints To Respect
 

@@ -32,6 +32,7 @@ interface StoredDocument {
 
 const documents = new Map<string, StoredDocument>();
 const elementLocks = new Map<string, Map<string, string>>();
+const userSockets = new Map<string, string>();
 
 export function getDocuments() {
   return documents;
@@ -39,6 +40,10 @@ export function getDocuments() {
 
 export function getElementLocks() {
   return elementLocks;
+}
+
+export function getUserSockets() {
+  return userSockets;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -157,6 +162,7 @@ io.on("connection", (socket) => {
 
     currentRoom = documentId;
     currentUserId = userId;
+    userSockets.set(userId, socket.id);
     socket.join(documentId);
     socket.to(documentId).emit("user-joined", { userId });
 
@@ -175,6 +181,7 @@ io.on("connection", (socket) => {
     if (currentRoom === documentId) {
       currentRoom = null;
       currentUserId = null;
+      userSockets.delete(userId);
     }
   });
 
@@ -223,10 +230,43 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("webrtc-offer", ({ targetUserId, offer }) => {
+    const targetSocketId = userSockets.get(targetUserId);
+    if (targetSocketId && currentUserId) {
+      io.to(targetSocketId).emit("webrtc-offer", {
+        fromUserId: currentUserId,
+        offer,
+      });
+    }
+  });
+
+  socket.on("webrtc-answer", ({ targetUserId, answer }) => {
+    const targetSocketId = userSockets.get(targetUserId);
+    if (targetSocketId && currentUserId) {
+      io.to(targetSocketId).emit("webrtc-answer", {
+        fromUserId: currentUserId,
+        answer,
+      });
+    }
+  });
+
+  socket.on("webrtc-ice-candidate", ({ targetUserId, candidate }) => {
+    const targetSocketId = userSockets.get(targetUserId);
+    if (targetSocketId && currentUserId) {
+      io.to(targetSocketId).emit("webrtc-ice-candidate", {
+        fromUserId: currentUserId,
+        candidate,
+      });
+    }
+  });
+
   socket.on("disconnect", () => {
     if (currentRoom && currentUserId) {
       unlockAllForUser(currentRoom, currentUserId);
       socket.to(currentRoom).emit("user-left", { userId: currentUserId });
+    }
+    if (currentUserId) {
+      userSockets.delete(currentUserId);
     }
   });
 });

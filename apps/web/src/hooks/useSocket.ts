@@ -6,7 +6,7 @@ import type {
   CanvasDocument,
   CanvasElement,
 } from "@starter/shared";
-import { useCanvasStore } from "../store/appStore";
+import { useCanvasStore, type SpatialTarget } from "../store/appStore";
 
 const SOCKET_URL = "http://localhost:3001";
 
@@ -159,6 +159,7 @@ export function useSocket(documentId: string | null) {
   );
 
   return {
+    socketRef,
     onRestDocumentLoaded,
     updateElementsViaSocket,
     saveViaSocket,
@@ -190,7 +191,46 @@ function applyLiveUpdate(
     }
   }
 
-  useCanvasStore.setState({ elements: merged, seq });
+  const currentElements = store.elements;
+  const newTargets: Record<string, SpatialTarget> = { ...store.elementTargets };
+
+  const lerpedElements = merged.map((newEl) => {
+    const curEl = currentElements.find((e) => e.id === newEl.id);
+    if (!curEl) return newEl;
+
+    const spatialChanged =
+      curEl.x !== newEl.x ||
+      curEl.y !== newEl.y ||
+      curEl.width !== newEl.width ||
+      curEl.height !== newEl.height ||
+      curEl.rotation !== newEl.rotation;
+
+    if (spatialChanged) {
+      newTargets[newEl.id] = {
+        x: newEl.x,
+        y: newEl.y,
+        width: newEl.width,
+        height: newEl.height,
+        rotation: newEl.rotation,
+      };
+      return {
+        ...newEl,
+        x: curEl.x,
+        y: curEl.y,
+        width: curEl.width,
+        height: curEl.height,
+        rotation: curEl.rotation,
+      } as CanvasElement;
+    }
+
+    return newEl;
+  });
+
+  useCanvasStore.setState({
+    elements: lerpedElements,
+    seq,
+    elementTargets: newTargets,
+  });
 }
 
 function applySaveUpdate(
@@ -223,5 +263,6 @@ function applySaveUpdate(
     seq,
     docName: doc.name,
     isDirty: false,
+    elementTargets: {},
   });
 }

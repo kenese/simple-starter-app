@@ -10,20 +10,20 @@
 2. [x] Feature 2 - Save Document to BE (persist canvas state with versioning)
 3. [x] Feature 3 - Multi Documents (routing, doc switching, new doc)
 4. [x] Feature 4 - Multi User (socket.io, rooms, locking, real-time sync)
-5. [ ] Feature 5 - Multi User Mouse Tracking (WebRTC cursor positions)
+5. [x] Feature 5 - Multi User Mouse Tracking (WebRTC cursor positions)
 
 ## Active Sprint
-- Feature: Feature 4 - Multi User
+- Feature: Feature 5 - Multi User Mouse Tracking
 - Status: completed
 - Plan:
-  - Shared: SocketClientEvents, SocketServerEvents, ElementLock types
-  - Server: socket.io with rooms per document, save/lock/unlock/join/leave events, broadcasts to room, auto-unlock on disconnect
-  - Web: useSocket hook with version-gated buffering, save via socket, lock/unlock on select/deselect
-  - Store: userId (session UUID), locks array, documentReady flag, isLockedByOther/getLockOwner helpers
-  - Canvas: locked elements show amber dashed border, can't be selected/dragged by other users
-  - REST GET remains for initial document load; all subsequent saves via socket
-- Verification: 26 tests passing (10 server, 16 web), lint clean
-- Notes: Each browser tab = unique user (session UUID). To test multi-user, open same doc URL in two tabs.
+  - Shared: CursorPosition, SDPPayload, ICEPayload types; WebRTC signaling events on SocketClientEvents/SocketServerEvents
+  - Server: userId→socketId map, relay webrtc-offer/answer/ice-candidate between peers, cleanup on disconnect
+  - Web: useWebRTC hook manages RTCPeerConnection per peer, data channels for cursor broadcast, throttled at 50ms
+  - Store: remoteCursors array with setRemoteCursor/removeRemoteCursor/clearRemoteCursors actions
+  - Canvas: onMouseMove on Stage broadcasts cursor position; RemoteCursors overlay renders colored SVG arrows with userId labels
+  - Socket.io remains for document operations; WebRTC used only for ephemeral cursor positions
+- Verification: 80 unit tests passing (25 server, 55 web), 26 E2E tests passing, lint clean
+- Notes: Existing users initiate WebRTC offers to new joiners. Data channels are peer-to-peer so cursor data never hits the server. Cursors auto-remove on peer disconnect.
 
 ## Next Step
-- Begin Feature 5: Multi User Mouse Tracking (WebRTC cursor positions)
+- All features complete. Ready for review.
