@@ -1,5 +1,5 @@
 {
-  "name": "multi-counter-starter-app",
+  "name": "canva-clone",
   "private": true,
   "scripts": {
     "dev": "turbo dev",

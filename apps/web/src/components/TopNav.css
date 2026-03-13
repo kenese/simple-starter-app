@@ -6,7 +6,7 @@
     display: flex;
     align-items: center;
     padding: 0 20px;
-    gap: 32px;
+    gap: 16px;
 }
 
 .topnav-brand {
@@ -20,27 +20,254 @@
     white-space: nowrap;
 }
 
-.topnav-links {
+/* ─── Document title ──────────────────────────────── */
+
+.topnav-title-area {
     display: flex;
-    gap: 4px;
+    align-items: center;
+    min-width: 0;
 }
 
-.topnav-link {
-    padding: 6px 16px;
+.topnav-title-btn {
+    padding: 4px 10px;
+    border: 1px solid transparent;
     border-radius: var(--radius);
-    color: var(--text-secondary);
-    text-decoration: none;
+    background: transparent;
+    color: var(--text-primary);
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
     transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
 }
 
-.topnav-link:hover {
-    color: var(--text-primary);
+.topnav-title-btn:hover {
+    border-color: var(--border);
     background: var(--bg-hover);
 }
 
-.topnav-link--active {
-    color: white;
+.topnav-title-edit-wrapper {
+    position: relative;
+}
+
+.topnav-title-input {
+    padding: 4px 10px;
+    border: 1px solid var(--bg-active);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    outline: none;
+    width: 220px;
+}
+
+.topnav-title-input--error {
+    border-color: #ef4444;
+}
+
+.topnav-title-error {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    font-size: 11px;
+    color: #ef4444;
+    white-space: nowrap;
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #ef4444;
+    z-index: 50;
+}
+
+/* ─── Undo / Redo ────────────────────────────────── */
+
+.topnav-undo-redo {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 4px;
+}
+
+.topnav-undo-btn,
+.topnav-redo-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.topnav-undo-btn:hover:not(:disabled),
+.topnav-redo-btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--border);
+}
+
+.topnav-undo-btn:disabled,
+.topnav-redo-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+/* ─── Document picker ─────────────────────────────── */
+
+.topnav-doc-picker {
+    position: relative;
+    margin-left: 8px;
+}
+
+.topnav-doc-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s ease;
+}
+
+.topnav-doc-btn:hover {
+    background: var(--bg-hover);
+}
+
+.topnav-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 220px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+}
+
+.topnav-dropdown-item {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.1s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topnav-dropdown-item:hover {
+    background: var(--bg-hover);
+}
+
+.topnav-dropdown-item--active {
     background: var(--bg-active);
+    color: white;
+}
+
+.topnav-dropdown-item--active:hover {
+    background: var(--bg-active);
+}
+
+.topnav-dropdown-new {
+    color: var(--text-accent);
+    font-weight: 600;
+}
+
+.topnav-dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+
+/* ─── User presence ───────────────────────────────── */
+
+.topnav-users {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.topnav-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    cursor: default;
+    border: 2px solid transparent;
+    transition: transform 0.15s ease;
+}
+
+.topnav-user-avatar--you {
+    border-color: #fff;
+}
+
+.topnav-user-avatar:hover {
+    transform: scale(1.12);
+}
+
+/* ─── Save button ─────────────────────────────────── */
+
+.topnav-save-btn {
+    margin-left: auto;
+    padding: 6px 16px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: default;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.topnav-users + .topnav-save-btn {
+    margin-left: 0;
+}
+
+.topnav-save-btn--dirty {
+    background: var(--bg-active);
+    color: white;
+    border-color: var(--bg-active);
+    cursor: pointer;
+}
+
+.topnav-save-btn--dirty:hover {
+    opacity: 0.9;
+}
+
+.topnav-save-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
