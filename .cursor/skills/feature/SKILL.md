@@ -37,7 +37,7 @@ If `PLAN.md` does not exist, this is the first feature. The user's request **mus
 3. Read `DECISIONS.md` if it exists.
 4. **Concurrency check**: if `PLAN.md` has any active sprints with `in_progress` status, check whether their scopes overlap with this feature's scope. If scopes overlap, warn: _"Active sprint [name] is working in [scope]. This feature also touches that area — proceeding may cause file conflicts."_ Let the user decide whether to continue. Non-overlapping sprints are fine.
 5. Restate the feature in one sentence.
-6. Propose a plan and wait for approval before coding.
+6. Propose a plan and wait for approval. Once approved, write `PLAN.md` immediately, then begin coding.
 
 ## Persistent Plan File (`PLAN.md`)
 
@@ -46,7 +46,7 @@ Maintain a root-level `PLAN.md` as the source of truth for the current feature.
 ### When to create/update
 
 1. Create `PLAN.md` if it does not exist.
-2. Write or refresh the plan before coding starts.
+2. **Write or refresh the plan as soon as the user confirms at the plan gate** — before any coding. Do not defer until sprint completion or session end; other agents need to see it immediately.
 3. Update immediately after verification and on scope changes.
 4. On session end, leave clear next steps so another agent can continue.
 
@@ -82,7 +82,7 @@ Each active sprint gets its own subsection under **Active Sprints**. When a feat
 
 Do not proceed past any gate until the user confirms.
 
-1. **Plan gate**: share a 1-2 sentence plan for the full feature, write/update `PLAN.md`, and ask for approval.
+1. **Plan gate**: share a 1-2 sentence plan for the full feature and ask for approval. **As soon as the user confirms**, write/update `PLAN.md` immediately — before any coding. This ensures other agents see the plan right away; do not defer the write until later.
 2. **Sprint gate**: implement the feature, then stop and report exactly what changed.
 3. **Verification gate**: run browser-based visual verification when available and provide evidence (screenshot when possible). If browser tooling is unavailable, run available checks and request manual visual verification.
 4. **Approval gate**: ask the user to confirm they are happy with the feature before proceeding to testing.
