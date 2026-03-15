@@ -14,3 +14,4 @@ playwright/.cache/
 playwright/.auth/
 coverage/
 *.lcov
+packages/shared/tsconfig.tsbuildinfo
