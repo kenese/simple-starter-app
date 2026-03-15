@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { TopNav } from './TopNav';
-import { BrowserRouter } from 'react-router-dom';
 
 const meta = {
     title: 'Components/TopNav',
@@ -8,17 +7,14 @@ const meta = {
     parameters: {
         layout: 'fullscreen',
     },
-    decorators: [
-        (Story) => (
-            <BrowserRouter>
-                <Story />
-            </BrowserRouter>
-        ),
-    ],
     tags: ['autodocs'],
 } satisfies Meta<typeof TopNav>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+    args: {
+        documentId: "f5facc06-f951-4b26-8ef4-35781876e862",
+    },
+};

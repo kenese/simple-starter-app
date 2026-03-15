@@ -1,12 +1,40 @@
-// ─── App State ──────────────────────────────────────────────────
+export type CanvasElementType = "rectangle" | "circle" | "text";
 
-export interface AppState {
-    counter: number;
+export interface DesignElement {
+    id: string;
+    type: CanvasElementType;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    text?: string;
 }
 
-// ─── Defaults ───────────────────────────────────────────────────
+export interface DesignSnapshot {
+    elements: DesignElement[];
+}
 
-export const INITIAL_APP_STATE: AppState = {
-    counter: 0,
-};
+export interface DocumentVersion {
+    version: number;
+    savedAt: string;
+    snapshot: DesignSnapshot;
+}
+
+export interface DesignDocument {
+    documentId: string;
+    latestVersion: number;
+    versions: DocumentVersion[];
+}
+
+export interface GetDocumentResponse {
+    document: DesignDocument;
+}
+
+export interface SaveDocumentVersionRequest {
+    snapshot: DesignSnapshot;
+}
+
+export interface SaveDocumentVersionResponse {
+    document: DesignDocument;
+}
 

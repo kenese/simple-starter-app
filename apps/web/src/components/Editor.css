@@ -1,0 +1,187 @@
+.editor {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    background: var(--bg-primary);
+}
+
+.editor-sidebar {
+    width: 220px;
+    border-right: 1px solid var(--border);
+    background: var(--bg-sidebar);
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.editor-sidebar-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+}
+
+.editor-save-button {
+    border: 1px solid #4f46e5;
+    border-radius: var(--radius);
+    background: #3730a3;
+    color: #f5f3ff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.editor-save-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.editor-status-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.editor-error-text {
+    color: #fca5a5;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.editor-tool {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 10px 12px;
+    text-align: left;
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.editor-tool:hover {
+    background: var(--bg-hover);
+    border-color: #4b4b80;
+}
+
+.editor-canvas-shell {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    padding: 22px;
+}
+
+.editor-canvas {
+    position: relative;
+    width: 100%;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        #111126;
+    background-size: 24px 24px;
+    overflow: hidden;
+}
+
+.editor-loading-label {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.canvas-element {
+    position: absolute;
+    user-select: none;
+}
+
+.canvas-element--rectangle {
+    background: #8b5cf6;
+    border: 1px solid #a78bfa;
+    border-radius: 10px;
+}
+
+.canvas-element--circle {
+    background: #ec4899;
+    border: 1px solid #f472b6;
+    border-radius: 999px;
+}
+
+.canvas-element--text {
+    background: transparent;
+}
+
+.canvas-text-input {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #4f46e5;
+    border-radius: 8px;
+    background: #181837;
+    color: var(--text-primary);
+    padding: 8px 10px;
+    outline: none;
+}
+
+.canvas-text-preview {
+    width: 100%;
+    height: 100%;
+    border: 1px solid #4f46e5;
+    border-radius: 8px;
+    background: #181837;
+    color: var(--text-primary);
+    padding: 8px 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+}
+
+.canvas-resize-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid #c4b5fd;
+    background: #4f46e5;
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+}
+
+.canvas-element:hover .canvas-resize-handle {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.canvas-resize-handle--top-left {
+    top: -6px;
+    left: -6px;
+    cursor: nwse-resize;
+}
+
+.canvas-resize-handle--top-right {
+    top: -6px;
+    right: -6px;
+    cursor: nesw-resize;
+}
+
+.canvas-resize-handle--bottom-left {
+    bottom: -6px;
+    left: -6px;
+    cursor: nesw-resize;
+}
+
+.canvas-resize-handle--bottom-right {
+    bottom: -6px;
+    right: -6px;
+    cursor: nwse-resize;
+}

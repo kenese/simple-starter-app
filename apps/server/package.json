@@ -12,10 +12,8 @@
     },
     "dependencies": {
         "@starter/shared": "workspace:*",
-        "@types/uuid": "^10.0.0",
         "cors": "^2.8.5",
-        "express": "^4.21.0",
-        "uuid": "^11.0.0"
+        "express": "^4.21.0"
     },
     "devDependencies": {
         "@types/cors": "^2.8.17",

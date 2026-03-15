@@ -1,51 +1,67 @@
-# Starter App — Template
+# Canva Clone — Current Architecture
 
 ## Architecture
 - **Monorepo**: Turborepo with `apps/web`, `apps/server`, `packages/shared`
-- **Frontend**: React 19 + Vite + Zustand + TanStack Query + React Router
-- **Backend**: Express (REST API setup, easily extensible for WebSockets)
-- **Shared**: TypeScript types for basic payloads (e.g. `AppState`) in `@starter/shared`
-- **Testing & UI Tooling**: Vitest (Unit/Component), Playwright (E2E), Storybook (UI Explorer)
+- **Frontend**: React 19 + Vite + React Router + Zustand
+- **Backend**: Express REST server with in-memory document persistence
+- **Shared Package**: `@starter/shared` defines canvas element and document API contracts
+- **Testing & UI Tooling**: Vitest (unit/component + storybook integration), Playwright (E2E), Storybook
 
 ## Project Structure
 ```
 apps/web/src/
-  components/    — React components (TopNav, Counter)
-  hooks/         — Custom hooks (useCounter - TanStack Query)
-  store/         — Zustand stores (appStore for local UI state)
-  App.tsx        — Root layout with routing
-  main.tsx       — Entry point with QueryClientProvider
-apps/web/tests/  — Playwright E2E tests
+  api/documents.ts         — load/save document client
+  components/
+    TopNav.tsx             — editor top bar with current document context
+    Editor.tsx             — sidebar + design canvas + document load/save actions
+  store/
+    appStore.ts            — Zustand store for theme and canvas elements
+  App.tsx                  — route setup (`/` redirect, `/:documentId` editor)
+  main.tsx                 — React entry point with BrowserRouter
+apps/web/tests/
+  example.spec.ts          — Playwright editor interaction flows
 
 apps/server/src/
-  index.ts       — Express REST server
+  index.ts                 — Express server and document version endpoints
 
 packages/shared/src/
-  index.ts       — Shared types (e.g., AppState) for frontend and backend
+  index.ts                 — shared canvas/document/domain contracts
 ```
 
-## Key Patterns
-- Data fetching is handled by **TanStack Query** (React Query) against the Express backend.
-- The `apps/server` exposes a simple REST API (e.g., `/api/counter`). This server is kept deliberately simple and can be quickly upgraded with `socket.io` during an interview if real-time features are required.
-- **Zustand** is retained but intended only for purely local client state (e.g., UI theme toggles, sidebar states). Server state should go through React Query.
-- Shared types in `@starter/shared` should be mapped cleanly to API endpoints to avoid duplication. Keep it clean to make adding features during interviews fast.
+## Routing And Frontend Data Flow
+- Visiting `/` generates a new UUID and redirects to `/:documentId`.
+- `App` reads `documentId` from the route and renders `TopNav` + `Editor` for that document.
+- `Editor` loads `GET /api/documents/:documentId` on route change:
+  - if found, it hydrates canvas elements from the latest saved snapshot
+  - if not found, it initializes an empty unsaved document
+- Sidebar tool buttons and drag-drop interactions still add design elements via `useAppStore`.
+- Clicking **Save design** posts current canvas elements to `POST /api/documents/:documentId/versions`.
+
+## State Model
+- **Client (Zustand)**:
+  - `theme`: dark/light UI preference
+  - `elements`: editable canvas element array
+  - actions: `setElements`, `addElement`, `updateTextElement`, `toggleTheme`
+- **Server (in-memory)**:
+  - `Map<documentId, DesignDocument>`
+  - each `DesignDocument` tracks `latestVersion` and retained `versions`
+
+## Backend API
+- `GET /api/health` returns `{ status: "ok" }`
+- `GET /api/documents/:documentId` returns `{ document }` or `404` when missing
+- `POST /api/documents/:documentId/versions` validates snapshot payload, creates a new version, and returns updated `{ document }`
+
+## Versioning Rules
+- Each save creates a new immutable version with:
+  - incremented `version`
+  - `savedAt` timestamp
+  - full `snapshot` of canvas elements
+- Only the latest 10 versions are retained per document
+- `latestVersion` continues incrementing even when older versions are trimmed
 
 ## Commands (Root)
-- `pnpm dev` — starts both frontend (5173) and backend (3001) via Turborepo
-- `pnpm build` — production build for all packages
-- `pnpm test` — runs Vitest unit and component tests
-- `pnpm test:e2e` — runs Playwright E2E tests
-- `pnpm storybook` — starts Storybook development server (6006)
-- `pnpm clean` — removes build directories
-
-## Commands (Workspace Specific)
-- `pnpm --filter @starter/web dev` — frontend only
-- `pnpm --filter @starter/server dev` — backend only
-
-## Conventions
-- Zustand for client state (not Redux/Context)
-- CSS Modules or plain CSS for styling (co-located with components)
-- Inter font from Google Fonts
-- Dark theme: bg `#0f0f1a`/`#1a1a2e`, text `#e2e8f0`, accent `#6366f1`
-- Use `.stories.tsx` files alongside components for Storybook documentation
-- Use `.test.tsx` for unit/component tests in Vitest
+- `pnpm dev` — starts frontend and backend with Turborepo
+- `pnpm build` — production build for all workspaces
+- `pnpm test` — runs workspace Vitest suites
+- `pnpm test:e2e` — runs Playwright tests
+- `pnpm storybook` — starts Storybook

@@ -1,18 +1,37 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
-test('has title', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+test.describe("Document persistence flows", () => {
+    test("redirects root route to a document UUID route", async ({ page }) => {
+        await page.goto("/");
+        await expect(page).toHaveURL(/\/[0-9a-f-]{36}$/);
+    });
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
-});
+    test("saves and reloads document content for current URL", async ({ page }) => {
+        await page.goto("/");
 
-test('get started link', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+        await page.getByRole("button", { name: "Rectangle" }).click();
+        await page.getByRole("button", { name: "Save design" }).click();
+        await expect(page.locator(".editor-status-text")).toContainText("Saved version 1");
 
-  // Click the get started link.
-  await page.getByRole('link', { name: 'Get started' }).click();
+        const beforeReload = page.url();
+        await page.reload();
 
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+        await expect(page).toHaveURL(beforeReload);
+        await expect(page.locator(".canvas-element--rectangle")).toHaveCount(1);
+        await expect(page.locator(".editor-status-text")).toContainText("Loaded version 1");
+    });
+
+    test("retains only 10 versions while latest version increments", async ({ page }) => {
+        await page.goto("/");
+        await page.getByRole("button", { name: "Rectangle" }).click();
+
+        for (let index = 0; index < 11; index += 1) {
+            await page.getByRole("button", { name: "Save design" }).click();
+            await expect(page.locator(".editor-status-text")).toContainText(
+                `Saved version ${index + 1}`
+            );
+        }
+
+        await expect(page.locator(".editor-status-text")).toContainText("Saved version 11 (10/10 retained)");
+    });
 });
