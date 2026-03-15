@@ -1,15 +1,15 @@
 import { beforeEach, describe, it, expect } from "vitest";
-import { useAppStore } from "./appStore";
+import { getOrderedElements, useAppStore } from "./appStore";
 
 describe("App Store (Zustand)", () => {
     beforeEach(() => {
-        useAppStore.setState({ theme: "dark", elements: [] });
+        useAppStore.setState({ theme: "dark", elementIds: [], elementsById: {} });
     });
 
     it("should initialize with dark theme and empty elements", () => {
         const state = useAppStore.getState();
         expect(state.theme).toBe("dark");
-        expect(state.elements).toHaveLength(0);
+        expect(state.elementIds).toHaveLength(0);
     });
 
     it("should toggle the theme", () => {
@@ -31,7 +31,8 @@ describe("App Store (Zustand)", () => {
         addElement("circle", { x: 120, y: 180 });
         addElement("text");
 
-        const elements = useAppStore.getState().elements;
+        const state = useAppStore.getState();
+        const elements = getOrderedElements(state.elementIds, state.elementsById);
         expect(elements).toHaveLength(3);
         expect(elements[0]).toMatchObject({
             type: "rectangle",
@@ -57,12 +58,17 @@ describe("App Store (Zustand)", () => {
         const { addElement, updateTextElement } = useAppStore.getState();
         addElement("text");
         addElement("rectangle");
-        const [textElement, rectangleElement] = useAppStore.getState().elements;
+        const state = useAppStore.getState();
+        const [textElement, rectangleElement] = getOrderedElements(state.elementIds, state.elementsById);
 
         updateTextElement(textElement.id, "Heading");
         updateTextElement(rectangleElement.id, "Ignored");
 
-        const [updatedText, rectangle] = useAppStore.getState().elements;
+        const updatedState = useAppStore.getState();
+        const [updatedText, rectangle] = getOrderedElements(
+            updatedState.elementIds,
+            updatedState.elementsById
+        );
         expect(updatedText.text).toBe("Heading");
         expect(rectangle.type).toBe("rectangle");
         expect(rectangle.text).toBeUndefined();

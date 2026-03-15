@@ -4,9 +4,20 @@ import type { DesignElement } from "@starter/shared";
 import { Editor } from "./Editor";
 import { useAppStore } from "../store/appStore";
 
+const toNormalizedElements = (elements: DesignElement[]) => {
+    const elementIds = elements.map((element) => element.id);
+    const elementsById: Record<string, DesignElement> = {};
+
+    for (const element of elements) {
+        elementsById[element.id] = element;
+    }
+
+    return { elementIds, elementsById };
+};
+
 const SeededEditor = ({ elements }: { elements: DesignElement[] }) => {
     useEffect(() => {
-        useAppStore.setState({ theme: "dark", elements });
+        useAppStore.setState({ theme: "dark", ...toNormalizedElements(elements) });
     }, [elements]);
 
     return <Editor documentId="story-document-id" />;

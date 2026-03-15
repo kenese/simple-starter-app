@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Editor } from "./Editor";
-import { useAppStore } from "../store/appStore";
+import { getOrderedElements, useAppStore } from "../store/appStore";
 import * as documentsApi from "../api/documents";
 
 type MockDataTransfer = {
@@ -26,7 +26,7 @@ const createDataTransfer = (): MockDataTransfer => {
 
 describe("Editor", () => {
     beforeEach(() => {
-        useAppStore.setState({ theme: "dark", elements: [] });
+        useAppStore.setState({ theme: "dark", elementIds: [], elementsById: {} });
         vi.spyOn(documentsApi, "getDocument").mockResolvedValue(null);
         vi.spyOn(documentsApi, "saveDocumentVersion").mockResolvedValue({
             documentId: "test-doc",
@@ -57,8 +57,10 @@ describe("Editor", () => {
 
         const rectangle = container.querySelector(".canvas-element--rectangle");
         expect(rectangle).toBeInTheDocument();
-        expect(useAppStore.getState().elements).toHaveLength(1);
-        expect(useAppStore.getState().elements[0].type).toBe("rectangle");
+        const state = useAppStore.getState();
+        const elements = getOrderedElements(state.elementIds, state.elementsById);
+        expect(elements).toHaveLength(1);
+        expect(elements[0].type).toBe("rectangle");
     });
 
     it("adds a circle at drop coordinates when dragging from sidebar", async () => {
@@ -90,7 +92,8 @@ describe("Editor", () => {
             clientY: 190,
         });
 
-        const created = useAppStore.getState().elements[0];
+        const state = useAppStore.getState();
+        const created = getOrderedElements(state.elementIds, state.elementsById)[0];
         expect(created.type).toBe("circle");
         expect(created.x).toBeGreaterThanOrEqual(8);
         expect(created.y).toBeGreaterThanOrEqual(8);

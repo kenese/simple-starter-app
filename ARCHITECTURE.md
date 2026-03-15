@@ -35,13 +35,16 @@ packages/shared/src/
   - if found, it hydrates canvas elements from the latest saved snapshot
   - if not found, it initializes an empty unsaved document
 - Sidebar tool buttons and drag-drop interactions still add design elements via `useAppStore`.
+- `Editor` renders ordered `elementIds`, and each `CanvasElement` subscribes directly to `elementsById[id]` so element updates stay scoped to the changed id.
 - Clicking **Save design** posts current canvas elements to `POST /api/documents/:documentId/versions`.
 
 ## State Model
 - **Client (Zustand)**:
   - `theme`: dark/light UI preference
-  - `elements`: editable canvas element array
-  - actions: `setElements`, `addElement`, `updateTextElement`, `toggleTheme`
+  - normalized canvas state:
+    - `elementIds`: ordered list of element ids for render/save order
+    - `elementsById`: map of `id -> DesignElement` for O(1) single-element updates
+  - actions: `setElements`, `addElement`, `updateTextElement`, `updateElementFrame`, `toggleTheme`
 - **Server (in-memory)**:
   - `Map<documentId, DesignDocument>`
   - each `DesignDocument` tracks `latestVersion` and retained `versions`

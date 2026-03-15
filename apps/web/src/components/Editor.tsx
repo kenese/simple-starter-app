@@ -1,22 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { CanvasElementType, DesignElement } from "@starter/shared";
 import { getDocument, saveDocumentVersion } from "../api/documents";
-import { useAppStore } from "../store/appStore";
+import { getOrderedElements, useAppStore } from "../store/appStore";
+import { Sidebar } from "./Sidebar";
+import { EditorCanvas } from "./EditorCanvas";
+import { CanvasElement, type ResizeCorner } from "./CanvasElement";
 import "./Editor.css";
-
-const TOOL_ITEMS: Array<{ type: CanvasElementType; label: string }> = [
-    { type: "rectangle", label: "Rectangle" },
-    { type: "circle", label: "Circle" },
-    { type: "text", label: "Text Input" },
-];
 
 const DATA_TRANSFER_KEY = "application/x-canvas-tool";
 const MIN_ELEMENT_WIDTH = 40;
 const MIN_ELEMENT_HEIGHT = 24;
-const RESIZE_CORNERS = ["top-left", "top-right", "bottom-left", "bottom-right"] as const;
 
 type InteractionMode = "move" | "resize";
-type ResizeCorner = (typeof RESIZE_CORNERS)[number];
 
 interface ActiveInteraction {
     id: string;
@@ -38,7 +33,18 @@ export const Editor: React.FC<EditorProps> = ({ documentId }) => {
     const canvasRef = useRef<HTMLDivElement>(null);
     const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const textEditStartValuesRef = useRef<Record<string, string>>({});
-    const elements = useAppStore((state) => state.elements);
+    const activeElementNodeRef = useRef<HTMLDivElement | null>(null);
+    const movePreviewPositionRef = useRef<{ x: number; y: number } | null>(null);
+    const resizePreviewFrameRef = useRef<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    } | null>(null);
+    const rafIdRef = useRef<number | null>(null);
+    const pendingPointerRef = useRef<{ clientX: number; clientY: number } | null>(null);
+    const interactionSnapshotRef = useRef<ActiveInteraction | null>(null);
+    const elementIds = useAppStore((state) => state.elementIds);
     const addElement = useAppStore((state) => state.addElement);
     const updateTextElement = useAppStore((state) => state.updateTextElement);
     const updateElementFrame = useAppStore((state) => state.updateElementFrame);
@@ -49,6 +55,10 @@ export const Editor: React.FC<EditorProps> = ({ documentId }) => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [activeInteraction, setActiveInteraction] = useState<ActiveInteraction | null>(null);
     const [editingTextElementId, setEditingTextElementId] = useState<string | null>(null);
+    const getElementsSnapshot = useCallback(() => {
+        const state = useAppStore.getState();
+        return getOrderedElements(state.elementIds, state.elementsById);
+    }, []);
 
     const enqueueSave = useCallback(
         (elementsToSave: DesignElement[]) => {
@@ -117,10 +127,20 @@ export const Editor: React.FC<EditorProps> = ({ documentId }) => {
     }, [documentId, setElements]);
 
     const handleSave = () => {
-        enqueueSave(useAppStore.getState().elements);
+        enqueueSave(getElementsSnapshot());
     };
 
-    const createFromDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    const handleAddElement = (type: CanvasElementType) => {
+        addElement(type);
+    };
+
+    const handleCanvasDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+    };
+
+    const handleCanvasDrop = (event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
         const type = event.dataTransfer.getData(DATA_TRANSFER_KEY) as CanvasElementType;
         if (!type || !canvasRef.current) return;
 
@@ -135,250 +155,285 @@ export const Editor: React.FC<EditorProps> = ({ documentId }) => {
     useEffect(() => {
         if (!activeInteraction) return;
 
-        const handlePointerMove = (event: PointerEvent) => {
-            if (!canvasRef.current) return;
+        interactionSnapshotRef.current = activeInteraction;
 
-            const canvasWidth = canvasRef.current.clientWidth;
-            const canvasHeight = canvasRef.current.clientHeight;
-            const deltaX = event.clientX - activeInteraction.startPointerX;
-            const deltaY = event.clientY - activeInteraction.startPointerY;
+        const applyPendingToDOM = () => {
+            const interaction = interactionSnapshotRef.current;
+            const pending = pendingPointerRef.current;
+            const canvas = canvasRef.current;
+            const activeNode = activeElementNodeRef.current;
+            if (!interaction || !pending || !canvas || !activeNode) return;
 
-            if (activeInteraction.mode === "move") {
+            const canvasWidth = canvas.clientWidth;
+            const canvasHeight = canvas.clientHeight;
+            const deltaX = pending.clientX - interaction.startPointerX;
+            const deltaY = pending.clientY - interaction.startPointerY;
+
+            if (interaction.mode === "move") {
                 const nextX = Math.max(
                     0,
                     Math.min(
-                        activeInteraction.startX + deltaX,
-                        Math.max(0, canvasWidth - activeInteraction.startWidth)
+                        interaction.startX + deltaX,
+                        Math.max(0, canvasWidth - interaction.startWidth)
                     )
                 );
                 const nextY = Math.max(
                     0,
                     Math.min(
-                        activeInteraction.startY + deltaY,
-                        Math.max(0, canvasHeight - activeInteraction.startHeight)
+                        interaction.startY + deltaY,
+                        Math.max(0, canvasHeight - interaction.startHeight)
                     )
                 );
 
-                updateElementFrame(activeInteraction.id, { x: nextX, y: nextY });
-                return;
-            }
-
-            const corner = activeInteraction.resizeCorner ?? "bottom-right";
-            let nextX = activeInteraction.startX;
-            let nextY = activeInteraction.startY;
-            let nextWidth = activeInteraction.startWidth;
-            let nextHeight = activeInteraction.startHeight;
-
-            if (corner === "top-left" || corner === "bottom-left") {
-                const maxLeft = activeInteraction.startX + activeInteraction.startWidth - MIN_ELEMENT_WIDTH;
-                nextX = Math.max(0, Math.min(activeInteraction.startX + deltaX, maxLeft));
-                nextWidth = activeInteraction.startX + activeInteraction.startWidth - nextX;
+                movePreviewPositionRef.current = { x: nextX, y: nextY };
+                activeNode.style.willChange = "transform";
+                activeNode.style.transform = `translate(${nextX - interaction.startX}px, ${nextY - interaction.startY}px)`;
             } else {
-                nextWidth = Math.max(
-                    MIN_ELEMENT_WIDTH,
-                    Math.min(activeInteraction.startWidth + deltaX, canvasWidth - activeInteraction.startX)
-                );
-            }
+                const corner = interaction.resizeCorner ?? "bottom-right";
+                let nextX = interaction.startX;
+                let nextY = interaction.startY;
+                let nextWidth = interaction.startWidth;
+                let nextHeight = interaction.startHeight;
 
-            if (corner === "top-left" || corner === "top-right") {
-                const maxTop = activeInteraction.startY + activeInteraction.startHeight - MIN_ELEMENT_HEIGHT;
-                nextY = Math.max(0, Math.min(activeInteraction.startY + deltaY, maxTop));
-                nextHeight = activeInteraction.startY + activeInteraction.startHeight - nextY;
-            } else {
-                nextHeight = Math.max(
-                    MIN_ELEMENT_HEIGHT,
-                    Math.min(activeInteraction.startHeight + deltaY, canvasHeight - activeInteraction.startY)
-                );
-            }
+                if (corner === "top-left" || corner === "bottom-left") {
+                    const maxLeft = interaction.startX + interaction.startWidth - MIN_ELEMENT_WIDTH;
+                    nextX = Math.max(0, Math.min(interaction.startX + deltaX, maxLeft));
+                    nextWidth = interaction.startX + interaction.startWidth - nextX;
+                } else {
+                    nextWidth = Math.max(
+                        MIN_ELEMENT_WIDTH,
+                        Math.min(interaction.startWidth + deltaX, canvasWidth - interaction.startX)
+                    );
+                }
 
-            updateElementFrame(activeInteraction.id, {
-                x: nextX,
-                y: nextY,
-                width: nextWidth,
-                height: nextHeight,
-            });
+                if (corner === "top-left" || corner === "top-right") {
+                    const maxTop = interaction.startY + interaction.startHeight - MIN_ELEMENT_HEIGHT;
+                    nextY = Math.max(0, Math.min(interaction.startY + deltaY, maxTop));
+                    nextHeight = interaction.startY + interaction.startHeight - nextY;
+                } else {
+                    nextHeight = Math.max(
+                        MIN_ELEMENT_HEIGHT,
+                        Math.min(interaction.startHeight + deltaY, canvasHeight - interaction.startY)
+                    );
+                }
+
+                resizePreviewFrameRef.current = {
+                    x: nextX,
+                    y: nextY,
+                    width: nextWidth,
+                    height: nextHeight,
+                };
+                activeNode.style.willChange = "left, top, width, height";
+                activeNode.style.left = `${nextX}px`;
+                activeNode.style.top = `${nextY}px`;
+                activeNode.style.width = `${nextWidth}px`;
+                activeNode.style.height = `${nextHeight}px`;
+            }
+        };
+
+        const applyPendingPointer = () => {
+            if (rafIdRef.current === null) return;
+            applyPendingToDOM();
+            rafIdRef.current = null;
+        };
+
+        const handlePointerMove = (event: PointerEvent) => {
+            pendingPointerRef.current = { clientX: event.clientX, clientY: event.clientY };
+            if (rafIdRef.current === null) {
+                rafIdRef.current = requestAnimationFrame(applyPendingPointer);
+            }
         };
 
         const handlePointerUp = () => {
-            const latestElements = useAppStore.getState().elements;
-            const updatedElement = latestElements.find((element) => element.id === activeInteraction.id);
-            const changed =
-                !!updatedElement &&
-                (updatedElement.x !== activeInteraction.startX ||
-                    updatedElement.y !== activeInteraction.startY ||
-                    updatedElement.width !== activeInteraction.startWidth ||
-                    updatedElement.height !== activeInteraction.startHeight);
+            if (rafIdRef.current !== null) {
+                cancelAnimationFrame(rafIdRef.current);
+                rafIdRef.current = null;
+            }
+            applyPendingToDOM();
+            pendingPointerRef.current = null;
+            interactionSnapshotRef.current = null;
 
-            if (changed) {
-                enqueueSave(latestElements);
+            if (activeInteraction.mode === "move") {
+                const activeNode = activeElementNodeRef.current;
+                if (activeNode) {
+                    activeNode.style.transform = "";
+                    activeNode.style.willChange = "";
+                }
+
+                const finalPosition = movePreviewPositionRef.current;
+                const changed =
+                    !!finalPosition &&
+                    (finalPosition.x !== activeInteraction.startX ||
+                        finalPosition.y !== activeInteraction.startY);
+
+                if (changed && finalPosition) {
+                    updateElementFrame(activeInteraction.id, {
+                        x: finalPosition.x,
+                        y: finalPosition.y,
+                    });
+                    enqueueSave(getElementsSnapshot());
+                }
+            } else {
+                const activeNode = activeElementNodeRef.current;
+                if (activeNode) {
+                    activeNode.style.willChange = "";
+                }
+                const finalFrame = resizePreviewFrameRef.current;
+                const changed =
+                    !!finalFrame &&
+                    (finalFrame.x !== activeInteraction.startX ||
+                        finalFrame.y !== activeInteraction.startY ||
+                        finalFrame.width !== activeInteraction.startWidth ||
+                        finalFrame.height !== activeInteraction.startHeight);
+
+                if (changed && finalFrame) {
+                    updateElementFrame(activeInteraction.id, finalFrame);
+                    enqueueSave(getElementsSnapshot());
+                }
             }
 
+            movePreviewPositionRef.current = null;
+            resizePreviewFrameRef.current = null;
+            activeElementNodeRef.current = null;
             setActiveInteraction(null);
         };
 
         window.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUp);
         return () => {
+            if (rafIdRef.current !== null) {
+                cancelAnimationFrame(rafIdRef.current);
+                rafIdRef.current = null;
+            }
+            pendingPointerRef.current = null;
+            interactionSnapshotRef.current = null;
+            const activeNode = activeElementNodeRef.current;
+            if (activeInteraction.mode === "move") {
+                if (activeNode) {
+                    activeNode.style.transform = "";
+                    activeNode.style.willChange = "";
+                }
+                movePreviewPositionRef.current = null;
+            } else {
+                if (activeNode) {
+                    activeNode.style.willChange = "";
+                }
+                resizePreviewFrameRef.current = null;
+            }
+            activeElementNodeRef.current = null;
             window.removeEventListener("pointermove", handlePointerMove);
             window.removeEventListener("pointerup", handlePointerUp);
         };
-    }, [activeInteraction, enqueueSave, updateElementFrame]);
+    }, [activeInteraction, enqueueSave, getElementsSnapshot, updateElementFrame]);
 
-    const beginMoveInteraction = (
-        event: React.PointerEvent<HTMLDivElement>,
-        element: DesignElement
-    ) => {
-        if (event.button !== 0) return;
+    const beginMoveInteraction = useCallback(
+        (event: React.PointerEvent<HTMLDivElement>, element: DesignElement) => {
+            if (event.button !== 0) return;
 
-        if ((event.target as HTMLElement).closest(".canvas-text-input")) {
-            return;
-        }
+            if ((event.target as HTMLElement).closest(".canvas-text-input")) {
+                return;
+            }
 
-        event.preventDefault();
-        setActiveInteraction({
-            id: element.id,
-            mode: "move",
-            startPointerX: event.clientX,
-            startPointerY: event.clientY,
-            startX: element.x,
-            startY: element.y,
-            startWidth: element.width,
-            startHeight: element.height,
-        });
-    };
+            event.preventDefault();
+            activeElementNodeRef.current = event.currentTarget;
+            movePreviewPositionRef.current = { x: element.x, y: element.y };
+            setActiveInteraction({
+                id: element.id,
+                mode: "move",
+                startPointerX: event.clientX,
+                startPointerY: event.clientY,
+                startX: element.x,
+                startY: element.y,
+                startWidth: element.width,
+                startHeight: element.height,
+            });
+        },
+        []
+    );
 
-    const beginResizeInteraction = (
-        event: React.PointerEvent<HTMLButtonElement>,
-        element: DesignElement,
-        resizeCorner: ResizeCorner
-    ) => {
-        if (event.button !== 0) return;
+    const beginResizeInteraction = useCallback(
+        (
+            event: React.PointerEvent<HTMLButtonElement>,
+            element: DesignElement,
+            resizeCorner: ResizeCorner
+        ) => {
+            if (event.button !== 0) return;
 
-        event.preventDefault();
-        event.stopPropagation();
-        setActiveInteraction({
-            id: element.id,
-            mode: "resize",
-            startPointerX: event.clientX,
-            startPointerY: event.clientY,
-            startX: element.x,
-            startY: element.y,
-            startWidth: element.width,
-            startHeight: element.height,
-            resizeCorner,
-        });
-    };
+            const node = event.currentTarget.closest(".canvas-element");
+            if (!(node instanceof HTMLDivElement)) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            activeElementNodeRef.current = node;
+            resizePreviewFrameRef.current = {
+                x: element.x,
+                y: element.y,
+                width: element.width,
+                height: element.height,
+            };
+            setActiveInteraction({
+                id: element.id,
+                mode: "resize",
+                startPointerX: event.clientX,
+                startPointerY: event.clientY,
+                startX: element.x,
+                startY: element.y,
+                startWidth: element.width,
+                startHeight: element.height,
+                resizeCorner,
+            });
+        },
+        []
+    );
+
+    const handleTextFocus = useCallback((id: string, currentValue: string) => {
+        textEditStartValuesRef.current[id] = currentValue;
+    }, []);
+
+    const handleTextBlur = useCallback(
+        (id: string, currentValue: string) => {
+            const startingText = textEditStartValuesRef.current[id];
+            delete textEditStartValuesRef.current[id];
+            setEditingTextElementId(null);
+            if (startingText === currentValue) return;
+
+            enqueueSave(getElementsSnapshot());
+        },
+        [enqueueSave, getElementsSnapshot]
+    );
 
     return (
         <div className="editor">
-            <aside className="editor-sidebar">
-                <div className="editor-sidebar-title">Elements</div>
-                <button
-                    type="button"
-                    className="editor-save-button"
-                    onClick={handleSave}
-                    disabled={isSaving || isLoading}
-                >
-                    {isSaving ? "Saving..." : "Save design"}
-                </button>
-                <div className="editor-status-text">{saveMessage ?? "Not saved yet"}</div>
-                {errorMessage ? <div className="editor-error-text">{errorMessage}</div> : null}
-                {TOOL_ITEMS.map((item) => (
-                    <button
-                        key={item.type}
-                        type="button"
-                        className="editor-tool"
-                        draggable
-                        onClick={() => addElement(item.type)}
-                        disabled={isLoading}
-                        onDragStart={(event) => {
-                            event.dataTransfer.effectAllowed = "copy";
-                            event.dataTransfer.setData(DATA_TRANSFER_KEY, item.type);
-                        }}
-                    >
-                        {item.label}
-                    </button>
+            <Sidebar
+                onSave={handleSave}
+                onAddElement={handleAddElement}
+                isSaving={isSaving}
+                isLoading={isLoading}
+                saveMessage={saveMessage}
+                errorMessage={errorMessage}
+            />
+
+            <EditorCanvas
+                canvasRef={canvasRef}
+                isLoading={isLoading}
+                onDragOver={handleCanvasDragOver}
+                onDrop={handleCanvasDrop}
+            >
+                {elementIds.map((id) => (
+                    <CanvasElement
+                        key={id}
+                        elementId={id}
+                        isMoving={activeInteraction?.id === id && activeInteraction.mode === "move"}
+                        isEditingText={editingTextElementId === id}
+                        onPointerDown={beginMoveInteraction}
+                        onResizePointerDown={beginResizeInteraction}
+                        onStartEditing={setEditingTextElementId}
+                        onTextChange={updateTextElement}
+                        onTextFocus={handleTextFocus}
+                        onTextBlur={handleTextBlur}
+                    />
                 ))}
-            </aside>
-
-            <section className="editor-canvas-shell">
-                <div
-                    ref={canvasRef}
-                    className="editor-canvas"
-                    onDragOver={(event) => {
-                        event.preventDefault();
-                        event.dataTransfer.dropEffect = "copy";
-                    }}
-                    onDrop={(event) => {
-                        event.preventDefault();
-                        createFromDrop(event);
-                    }}
-                >
-                    {isLoading ? <div className="editor-loading-label">Loading document...</div> : null}
-                    {elements.map((element) => (
-                        <div
-                            key={element.id}
-                            className={`canvas-element canvas-element--${element.type}`}
-                            onPointerDown={(event) => beginMoveInteraction(event, element)}
-                            style={{
-                                left: element.x,
-                                top: element.y,
-                                width: element.width,
-                                height: element.height,
-                                cursor:
-                                    activeInteraction?.id === element.id &&
-                                    activeInteraction.mode === "move"
-                                        ? "grabbing"
-                                        : "grab",
-                            }}
-                        >
-                            {element.type === "text" ? (
-                                editingTextElementId === element.id ? (
-                                    <input
-                                        className="canvas-text-input"
-                                        value={element.text ?? ""}
-                                        autoFocus
-                                        onChange={(event) =>
-                                            updateTextElement(element.id, event.target.value)
-                                        }
-                                        onFocus={(event) => {
-                                            textEditStartValuesRef.current[element.id] = event.target.value;
-                                        }}
-                                        onBlur={(event) => {
-                                            const startingText = textEditStartValuesRef.current[element.id];
-                                            delete textEditStartValuesRef.current[element.id];
-                                            setEditingTextElementId(null);
-                                            if (startingText === event.target.value) return;
-
-                                            enqueueSave(useAppStore.getState().elements);
-                                        }}
-                                    />
-                                ) : (
-                                    <div
-                                        className="canvas-text-preview"
-                                        onDoubleClick={() => {
-                                            setEditingTextElementId(element.id);
-                                        }}
-                                    >
-                                        {element.text ?? ""}
-                                    </div>
-                                )
-                            ) : null}
-                            {RESIZE_CORNERS.map((corner) => (
-                                <button
-                                    key={corner}
-                                    type="button"
-                                    className={`canvas-resize-handle canvas-resize-handle--${corner}`}
-                                    aria-label={`Resize ${element.type} element from ${corner}`}
-                                    onPointerDown={(event) =>
-                                        beginResizeInteraction(event, element, corner)
-                                    }
-                                />
-                            ))}
-                        </div>
-                    ))}
-                </div>
-            </section>
+            </EditorCanvas>
         </div>
     );
 };
