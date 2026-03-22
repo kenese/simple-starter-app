@@ -1,13 +1,18 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
+import { useCanvasStore } from "../store/canvasStore";
 import "./TopNav.css";
 
 const NAV_ITEMS = [
-    { label: "Route 1", path: "/" },
+    { label: "Editor", path: "/" },
     { label: "Route 2", path: "/route2" },
 ];
 
 export const TopNav: React.FC = () => {
+    const location = useLocation();
+    const saveVersion = useCanvasStore((state) => state.saveVersion);
+    const isEditor = location.pathname === "/";
+
     return (
         <header className="topnav">
             <div className="topnav-brand">Starter App</div>
@@ -24,6 +29,16 @@ export const TopNav: React.FC = () => {
                         {item.label}
                     </NavLink>
                 ))}
+                {isEditor && (
+                    <button
+                        type="button"
+                        className="topnav-save"
+                        onClick={() => saveVersion()}
+                        data-testid="topnav-save"
+                    >
+                        Save
+                    </button>
+                )}
             </nav>
         </header>
     );
